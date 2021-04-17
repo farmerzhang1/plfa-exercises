@@ -3,7 +3,7 @@ module agda.part1.induction where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym) -- congruence
 open Eq.≡-Reasoning using (begin_; _≡⟨⟩_; step-≡; _∎)
-open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_)
+open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_; _^_)
 
 +-assoc : ∀ (m n p : ℕ) → (m + n) + p ≡ m + (n + p)
 +-assoc zero n p =
@@ -127,3 +127,26 @@ open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_)
 +-mcomm : ∀ (m n : ℕ) → m * n ≡ n * m
 +-mcomm m zero rewrite +-zz m = refl
 +-mcomm m (suc n) rewrite +-getone m n | +-mcomm m n = refl
+
++-mionus : ∀ (n : ℕ) → zero ∸ n ≡ zero
++-mionus zero = refl
++-mionus (suc n) = refl -- why???
+
+∸-|-assoc : ∀ (m n p : ℕ) → m ∸ n ∸ p ≡ m ∸ (n + p)
+∸-|-assoc zero n p rewrite +-mionus n | +-mionus (n + p) | +-mionus p = refl
+∸-|-assoc (suc m) zero p = refl
+∸-|-assoc (suc m) (suc n) p rewrite ∸-|-assoc m n p = refl
+
+^-distribˡ-|-* : ∀ (m n p : ℕ) → m ^ (n + p) ≡ (m ^ n) * (m ^ p)
+^-distribˡ-|-* m zero p rewrite +-identity′ (m ^ p) = refl
+^-distribˡ-|-* m (suc n) p rewrite ^-distribˡ-|-* m n p 
+                                 | +-massoc m (m ^ n) (m ^ p) = refl
+
+^-distribʳ-* : ∀ (m n p : ℕ) → (m * n) ^ p ≡ (m ^ p) * (n ^ p)
+^-distribʳ-* m n zero = refl
+^-distribʳ-* m n (suc p) rewrite ^-distribʳ-* m n p 
+                              | +-massoc m n ((m ^ p) * (n ^ p)) 
+                              | +-massoc m (m ^ p) (n * (n ^ p)) = {!   !}
+
+^-*-assoc : ∀ (m n p : ℕ) → (m ^ n) ^ p ≡ m ^ (n * p)
+^-*-assoc m n p = {!   !} -- 不写了！
