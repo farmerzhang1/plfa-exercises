@@ -82,3 +82,48 @@ open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_)
   ≡⟨⟩
     suc n + m
   ∎
+
+-- +-assoc′ : ∀ (m n p : ℕ) → (m + n) + p ≡ m + (n + p)
+-- +-assoc′ zero    n p                          =  refl
+-- +-assoc′ (suc m) n p  rewrite +-assoc′ m n p  =  refl
+
++-identity′ : ∀ (n : ℕ) → n + zero ≡ n
++-identity′ zero = refl
++-identity′ (suc n) rewrite +-identity′ n = refl
+
++-suc′ : ∀ (m n : ℕ) → m + suc n ≡ suc (m + n)
++-suc′ zero n = refl
++-suc′ (suc m) n rewrite +-suc′ m n = refl
+
++-comm′ : ∀ (m n : ℕ) → m + n ≡ n + m
++-comm′ m zero rewrite +-identity′ m = refl
++-comm′ m (suc n) rewrite +-suc′ m n | +-comm′ m n = refl
+
+-- Building proofs interactively
+
++-assoc′ : ∀ (m n p : ℕ) → (m + n) + p ≡ m + (n + p)
++-assoc′ zero n p = refl
++-assoc′ (suc m) n p rewrite +-assoc′ m n p = refl
+
++-swap : ∀ (m n p : ℕ) → m + (n + p) ≡ n + (m + p)
++-swap m n p rewrite +-comm m (n + p) | +-comm m p | +-assoc n p m = refl
+
++-distribute : ∀ (m n p : ℕ) → (m + n) * p ≡ m * p + n * p
++-distribute zero n p = refl
++-distribute (suc m) n p rewrite +-distribute m n p | +-assoc p (m * p) (n * p) = refl
+
++-massoc : ∀ (m n p : ℕ) → (m * n) * p ≡ m * (n * p)
++-massoc zero n p = refl
++-massoc (suc m) n p rewrite +-distribute n (m * n) p | +-massoc m n p = refl
+
++-zz : ∀ (m : ℕ) →  m * zero ≡ zero * m 
++-zz zero = refl
++-zz (suc m) rewrite +-zz m = refl
+
++-getone : ∀ (m n : ℕ) → m * (suc n) ≡ m + m * n
++-getone zero n = refl
++-getone (suc m) n rewrite +-getone m n | +-swap n m (m * n) = refl
+
++-mcomm : ∀ (m n : ℕ) → m * n ≡ n * m
++-mcomm m zero rewrite +-zz m = refl
++-mcomm m (suc n) rewrite +-getone m n | +-mcomm m n = refl
