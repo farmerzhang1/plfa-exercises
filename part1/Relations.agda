@@ -132,3 +132,45 @@ data _<_ : ℕ → ℕ → Set where
 ≤-iff-< : ∀ (m n : ℕ) → suc m ≤ n → m < n
 ≤-iff-< zero (suc n) sm≤sn = z<s
 ≤-iff-< (suc m) (suc n) (s≤s sm≤sn) = s<s (≤-iff-< m n sm≤sn)
+
+data even : ℕ → Set
+data odd  : ℕ → Set
+
+data even where
+
+  zero : -- overloading zero
+      ---------
+      even zero
+
+  suc  : ∀ {n : ℕ}
+    → odd n
+      ------------
+    → even (suc n)
+
+data odd where
+
+  suc  : ∀ {n : ℕ}
+    → even n
+      -----------
+    → odd (suc n)
+
+e+e≡e : ∀ {m n : ℕ}
+  → even m
+  → even n
+    ------------
+  → even (m + n)
+
+o+e≡o : ∀ {m n : ℕ}
+  → odd m
+  → even n
+    -----------
+  → odd (m + n)
+
+e+e≡e zero     en  =  en
+e+e≡e (suc om) en  =  suc (o+e≡o om en)
+
+o+e≡o (suc em) en  =  suc (e+e≡e em en)
+
+o+o≡e : ∀ {m n : ℕ} → odd m → odd n → even (m + n)
+o+o≡e (suc zero) on = suc on
+o+o≡e (suc (suc om)) on = suc (suc (o+o≡e om on))
