@@ -1,8 +1,8 @@
 module agda.part1.Relations where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong)
-open import Data.Nat using (ℕ; zero; suc; _+_)
-open import Data.Nat.Properties using (+-comm; +-identityʳ)
+open import Data.Nat using (ℕ; zero; suc; _+_; _*_)
+open import Data.Nat.Properties using (+-comm; +-identityʳ; *-comm)
 
 infix 4 _≤_
 data _≤_ : ℕ → ℕ → Set where -- DT!
@@ -98,3 +98,37 @@ data Total (m n : ℕ) : Set where
 +-mono-≤ m n p q m≤n p≤q  =  ≤-trans (+-monoˡ-≤ m n p m≤n) (+-monoʳ-≤ n p q p≤q) -- 妙啊！
 
 
+*-monoˡ-≤ : ∀ (p m n : ℕ) → m ≤ n → p * m ≤ p * n
+*-monoˡ-≤ zero m n m≤n = z≤n
+*-monoˡ-≤ (suc p) m n m≤n = +-mono-≤ m n (p * m) (p * n) 
+                                     m≤n 
+                                     (*-monoˡ-≤ p m n m≤n)
+
+*-monoʳ-≤ : ∀ (m n p : ℕ) → m ≤ n → m * p ≤ n * p
+*-monoʳ-≤ m n p m≤n  rewrite *-comm m p | *-comm n p = *-monoˡ-≤ p m n m≤n
+
+*-mono-≤ : ∀ (m n p q : ℕ)
+  → m ≤ n
+  → p ≤ q
+    -------------
+  → m * p ≤ n * q
+*-mono-≤ m n p q m≤n p≤q = ≤-trans (*-monoʳ-≤ m n p m≤n)
+                                   (*-monoˡ-≤ n p q p≤q) -- 妙啊！
+
+
+infix 4 _<_
+
+data _<_ : ℕ → ℕ → Set where
+
+  z<s : ∀ {n : ℕ}
+      ------------
+    → zero < suc n
+
+  s<s : ∀ {m n : ℕ}
+    → m < n
+      -------------
+    → suc m < suc n
+
+≤-iff-< : ∀ (m n : ℕ) → suc m ≤ n → m < n
+≤-iff-< zero (suc n) sm≤sn = z<s
+≤-iff-< (suc m) (suc n) (s≤s sm≤sn) = s<s (≤-iff-< m n sm≤sn)
