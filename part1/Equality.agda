@@ -80,3 +80,50 @@ module ≡-Reasoning {A : Set} where
   x ∎  =  refl
 
 open ≡-Reasoning
+
+trans′ : ∀ {A : Set} {x y z : A}
+  → x ≡ y
+  → y ≡ z
+    -----
+  → x ≡ z
+trans′ {A} {x} {y} {z} x≡y y≡z =
+  begin
+    x
+  ≡⟨ x≡y ⟩
+    y
+  ≡⟨ y≡z ⟩
+    z
+  ∎
+
+data ℕ : Set where
+  zero : ℕ
+  suc  : ℕ → ℕ
+
+_+_ : ℕ → ℕ → ℕ
+zero    + n  =  n
+(suc m) + n  =  suc (m + n)
+
+postulate -- 假设
+  +-identity : ∀ (m : ℕ) → m + zero ≡ m
+  +-suc : ∀ (m n : ℕ) → m + suc n ≡ suc (m + n)
+
++-comm : ∀ (m n : ℕ) → m + n ≡ n + m
++-comm m zero =
+  begin
+    m + zero
+  ≡⟨ +-identity m ⟩
+    m
+  ≡⟨⟩
+    zero + m
+  ∎
+
++-comm m (suc n) =
+  begin
+    m + suc n
+  ≡⟨ +-suc m n ⟩
+    suc (m + n)
+  ≡⟨ cong suc (+-comm m n) ⟩
+    suc (n + m)
+  ≡⟨⟩
+    suc n + m
+  ∎
