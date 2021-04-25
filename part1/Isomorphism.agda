@@ -27,7 +27,7 @@ same-app m n rewrite +-comm m n = helper m n
   helper m (suc n) = cong suc (helper m n)
 
 same : _+′_ ≡ _+_
-same = extensionality (λ m → extensionality (λ n → same-app m n)) 
+same = extensionality (λ m → extensionality (λ n → same-app m n))
 -- 一次只能对一个参数的函数用extensionality(refer to the definition)，所以只能curry一下
 
 infix 0 _≃_ -- really low priority!
@@ -38,3 +38,33 @@ record _≃_ (A B : Set) : Set where
     from∘to : ∀ (x : A) → (from ∘ to) x ≡ x
     to∘from : ∀ (y : B) → (to ∘ from) y ≡ y
 open _≃_
+
+data _≃′_ (A B : Set): Set where -- 我是data constructor
+  mk-≃′ : ∀ (to : A → B) →
+          ∀ (from : B → A) →
+          ∀ (from∘to : (∀ (x : A) → from (to x) ≡ x)) →
+          ∀ (to∘from : (∀ (y : B) → to (from y) ≡ y)) →
+          A ≃′ B
+
+to′ : ∀ {A B : Set} → (A ≃′ B) → (A → B)
+to′ (mk-≃′ f g g∘f f∘g) = f
+
+from′ : ∀ {A B : Set} → (A ≃′ B) → (B → A)
+from′ (mk-≃′ f g g∘f f∘g) = g
+
+from∘to′ : ∀ {A B : Set} → (A≃B : A ≃′ B) → (∀ (x : A) → from′ A≃B (to′ A≃B x) ≡ x)
+from∘to′ (mk-≃′ f g g∘f f∘g) = g∘f
+
+to∘from′ : ∀ {A B : Set} → (A≃B : A ≃′ B) → (∀ (y : B) → to′ A≃B (from′ A≃B y) ≡ y)
+to∘from′ (mk-≃′ f g g∘f f∘g) = f∘g
+
+≃-refl : ∀ {A : Set}
+    -----
+  → A ≃ A
+≃-refl =
+  record
+    { to      = λ{x → x}
+    ; from    = λ{y → y}
+    ; from∘to = λ{x → refl}
+    ; to∘from = λ{y → refl}
+    }
