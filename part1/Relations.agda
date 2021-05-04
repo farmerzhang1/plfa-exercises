@@ -39,8 +39,8 @@ inv-z≤n z≤n = refl
 ≤-refl {suc n} = s≤s ≤-refl
 
 ≤-refl′ : ∀ {n : ℕ} → n ≤ n
-≤-refl′ {zero} = z≤n 
-≤-refl′ {suc n} = s≤s ≤-refl′ 
+≤-refl′ {zero} = z≤n
+≤-refl′ {suc n} = s≤s ≤-refl′
 
 ≤-trans : ∀ {m n p : ℕ}
   → m ≤ n
@@ -100,8 +100,8 @@ data Total (m n : ℕ) : Set where
 
 *-monoˡ-≤ : ∀ (p m n : ℕ) → m ≤ n → p * m ≤ p * n
 *-monoˡ-≤ zero m n m≤n = z≤n
-*-monoˡ-≤ (suc p) m n m≤n = +-mono-≤ m n (p * m) (p * n) 
-                                     m≤n 
+*-monoˡ-≤ (suc p) m n m≤n = +-mono-≤ m n (p * m) (p * n)
+                                     m≤n
                                      (*-monoˡ-≤ p m n m≤n)
 
 *-monoʳ-≤ : ∀ (m n p : ℕ) → m ≤ n → m * p ≤ n * p
