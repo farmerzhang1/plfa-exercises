@@ -155,3 +155,57 @@ currying =
     ; from∘to =  λ{ f → refl }
     ; to∘from =  λ{ g → extensionality λ{ ⟨ x , y ⟩ → refl }}
     }
+
+→-elim : ∀ {A B : Set}
+  → (A → B)
+  → A
+    -------
+  → B
+→-elim L M = L M
+
+η-→ : ∀ {A B : Set} (f : A → B) → (λ (x : A) → f x) ≡ f
+η-→ f = refl
+
+→-distrib-⊎ : ∀ {A B C : Set} → (A ⊎ B → C) ≃ ((A → C) × (B → C))
+→-distrib-⊎ =
+  record
+    { to      = λ{ f → ⟨ f ∘ inj₁ , f ∘ inj₂ ⟩ }
+    ; from    = λ{ ⟨ g , h ⟩ → λ{ (inj₁ x) → g x ; (inj₂ y) → h y } } -- pattern matching here
+    ; from∘to = λ{ f → extensionality λ{ (inj₁ x) → refl ; (inj₂ y) → refl } }
+    ; to∘from = λ{ ⟨ g , h ⟩ → refl }
+    }
+
+data Bool : Set where
+  true  : Bool
+  false : Bool
+
+data Tri : Set where
+  aa : Tri
+  bb : Tri
+  cc : Tri
+
+→-count : (Bool → Tri) → ℕ
+→-count f with f true | f false -- with syntax is so pretty!
+...          | aa     | aa      =   1
+...          | aa     | bb      =   2
+...          | aa     | cc      =   3
+...          | bb     | aa      =   4
+...          | bb     | bb      =   5
+...          | bb     | cc      =   6
+...          | cc     | aa      =   7
+...          | cc     | bb      =   8
+...          | cc     | cc      =   9 -- 3(true map to 3 options) * 3(false map to 3 options)
+
+record _⇔_ (A B : Set) : Set where
+  field
+    to   : A → B
+    from : B → A
+
+⊎-weak-× : ∀ {A B C : Set} → (A ⊎ B) × C → A ⊎ (B × C)
+⊎-weak-× ⟨ inj₁ x , z ⟩ = inj₁ x
+⊎-weak-× ⟨ inj₂ y , z ⟩ = inj₂ ⟨ y , z ⟩
+
+⊎×-implies-×⊎ : ∀ {A B C D : Set} → (A × B) ⊎ (C × D) → (A ⊎ C) × (B ⊎ D)
+⊎×-implies-×⊎ (inj₁ ⟨ a , b ⟩) = ⟨ inj₁ a , inj₁ b ⟩
+⊎×-implies-×⊎ (inj₂ ⟨ c , d ⟩) = ⟨ inj₂ c , inj₂ d ⟩
+
