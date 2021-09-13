@@ -206,3 +206,8 @@ open _≲_
   ; from = from A≃B
   ; from∘to = from∘to A≃B
   }
+
+record _⇔_ (A B : Set) : Set where
+  field
+    to   : A → B
+    from : B → A
