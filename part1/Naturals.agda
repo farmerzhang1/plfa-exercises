@@ -1,4 +1,4 @@
-module plfa.part1.nat where -- should be the same as the file path
+module plfa.part1.Naturals where -- should be the same as the file path
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl)
