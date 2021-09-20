@@ -1,4 +1,4 @@
-module agda.part2.Lambda where
+module plfa.part2.Lambda where
 
 open import Data.Bool using (T; not)
 open import Data.Empty using (⊥; ⊥-elim)
@@ -11,7 +11,7 @@ open import Relation.Nullary.Decidable using (⌊_⌋; False; toWitnessFalse)
 open import Relation.Nullary.Negation using (¬?)
 open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; refl; cong)
 open import Relation.Binary.Definitions using (Decidable)
-open import agda.part1.Isomorphism using (_≲_)
+open import plfa.part1.Isomorphism using (_≲_)
 
 Id : Set
 Id = String
@@ -213,3 +213,16 @@ postulate
       --------------------
     → ∃[ P ] ((M —↠ P) × (N —↠ P))
 
+_ : twoᶜ · sucᶜ · `zero —↠ `suc `suc `zero
+_ =
+  begin
+    twoᶜ · sucᶜ · `zero
+  —→⟨ ξ-·₁ (β-ƛ V-ƛ) ⟩
+    (ƛ "z" ⇒ sucᶜ · (sucᶜ · ` "z")) · `zero
+  —→⟨ β-ƛ V-zero ⟩
+    sucᶜ · (sucᶜ · `zero)
+  —→⟨ ξ-·₂ V-ƛ (β-ƛ V-zero) ⟩
+    sucᶜ · `suc `zero
+  —→⟨ β-ƛ (V-suc V-zero) ⟩
+    `suc (`suc `zero)
+  ∎

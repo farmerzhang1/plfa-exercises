@@ -1,4 +1,4 @@
-module agda.part1.nat where -- should be the same as the file path
+module plfa.part1.nat where -- should be the same as the file path
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl)
@@ -15,7 +15,7 @@ seven = suc(suc(suc(suc(suc(suc(suc(zero)))))))
 six : ℕ
 six = 6 -- 好耶！
 
-_+_ : ℕ → ℕ → ℕ -- unicode is hard to type!!
+_+_ : ℕ → ℕ → ℕ -- Unicodes are hard to type!!
 zero + n = n
 suc (m) + n = suc(m + n)
 

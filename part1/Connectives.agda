@@ -1,12 +1,12 @@
-module agda.part1.Connectives where
+module plfa.part1.Connectives where
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl)
 open Eq.≡-Reasoning
 open import Data.Nat using (ℕ)
 open import Function using (_∘_)
-open import agda.part1.Isomorphism using (_≃_; _≲_; extensionality)
-open agda.part1.Isomorphism.≃-Reasoning
+open import plfa.part1.Isomorphism using (_≃_; _≲_; extensionality)
+open plfa.part1.Isomorphism.≃-Reasoning
 
 infixr 2 _×_
 data _×_ (A B : Set) : Set where

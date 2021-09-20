@@ -1,4 +1,4 @@
-module agda.part1.Equality where
+module plfa.part1.Equality where
 
 open import Level using (Level; _⊔_) renaming (zero to lzero; suc to lsuc)
 
