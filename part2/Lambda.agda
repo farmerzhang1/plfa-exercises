@@ -40,6 +40,15 @@ plus = μ "+" ⇒ ƛ "m" ⇒ ƛ "n" ⇒
            [zero⇒ ` "n"
            |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n") ]
 
+minus : Term
+minus = μ "-" ⇒ ƛ "m" ⇒ ƛ "n" ⇒
+  case ` "m"
+    [zero⇒ `zero
+    |suc "m" ⇒ case `"n"
+      [zero⇒ `suc `"m"
+      |suc "n" ⇒ `"-" · `"m" · `"n" ]
+    ] -- fixpoint here to represent recursion
+
 mul : Term
 mul = μ "*" ⇒ ƛ "m" ⇒ ƛ "n" ⇒
   case ` "m"
@@ -62,6 +71,7 @@ sucᶜ = ƛ "n" ⇒ `suc (` "n")
 mulᶜ : Term
 mulᶜ = ƛ "m" ⇒ ƛ "n" ⇒ ƛ "s" ⇒ ƛ "z" ⇒
   ` "m" · (` "n" · ` "s") · ` "z"
+
 data Value : Term → Set where
 
   V-ƛ : ∀ {x N}
@@ -308,3 +318,65 @@ data _⊢_⦂_ : Context → Term → Type → Set where
       -----------------
     → Γ ⊢ μ x ⇒ M ⦂ A
 
+Ch : Type → Type
+Ch A = (A ⇒ A) ⇒ A ⇒ A
+
+⊢twoᶜ : ∀ {Γ A} → Γ ⊢ twoᶜ ⦂ Ch A
+⊢twoᶜ = ⊢ƛ (⊢ƛ (⊢` ∋s · (⊢` ∋s · ⊢` ∋z)))
+  where
+  ∋s = S′ Z
+  ∋z = Z
+
+⊢two : ∀ {Γ} → Γ ⊢ two ⦂ `ℕ
+⊢two = ⊢suc (⊢suc ⊢zero)
+
+⊢plus : ∀ {Γ} → Γ ⊢ plus ⦂ `ℕ ⇒ `ℕ ⇒ `ℕ
+⊢plus = ⊢μ (⊢ƛ (⊢ƛ (⊢case (⊢` ∋m)
+          (⊢` ∋n)
+          (⊢suc (⊢` ∋+ · ⊢` ∋m′ · ⊢` ∋n′)))))
+  where
+  ∋+  = S′ (S′ (S′ Z))
+  ∋m  = S′ Z
+  ∋n  = Z
+  ∋m′ = Z
+  ∋n′ = S′ Z
+
+⊢minus : ∀ {Γ} → Γ ⊢ minus ⦂ `ℕ ⇒ `ℕ ⇒ `ℕ
+⊢minus = ⊢μ (⊢ƛ (⊢ƛ (⊢case (⊢` ∋m)
+    ⊢zero
+    (⊢case (⊢` ∋n) (⊢suc (⊢` ∋m′))
+      ((⊢` ∋- · ⊢` ∋m′′) · (⊢` ∋n′))))))
+  where
+  ∋m = S′ Z
+  ∋n = S′ Z
+  ∋- = S′ (S′ (S′ (S′ Z)))
+  ∋n′ = Z
+  ∋m′ = Z
+  ∋m′′ = S′ Z
+
+⊢2+2 : ∅ ⊢ plus · two · two ⦂ `ℕ
+⊢2+2 = ⊢plus · ⊢two · ⊢two
+
+⊢sucᶜ : ∅ ⊢ sucᶜ ⦂ `ℕ ⇒ `ℕ
+⊢sucᶜ = ⊢ƛ (⊢suc (⊢` Z))
+
+∋-injective : ∀ {Γ x A B} → Γ ∋ x ⦂ A → Γ ∋ x ⦂ B → A ≡ B
+∋-injective Z        Z          =  refl
+∋-injective Z        (S x≢ _)   =  ⊥-elim (x≢ refl)
+∋-injective (S x≢ _) Z          =  ⊥-elim (x≢ refl)
+∋-injective (S _ ∋x) (S _ ∋x′)  =  ∋-injective ∋x ∋x′
+
+-- 我得想想为什么用的是 Z and S，懂了
+-- Z是最外层的 context 和要得到的类型相同的时候可以用，如
+-- Γ , "+" ⦂ `ℕ ⇒ `ℕ ⇒ `ℕ , "m" ⦂ `ℕ , "n" ⦂ `ℕ ∋ "n"
+--      ⦂ `ℕ
+-- 但是如果它在内层，要跨过多少个变量-类型就需要多少个S′，而且还得保证id不同
+
+nope₁ : ∀ {A} → ¬ (∅ ⊢ `zero · `suc `zero ⦂ A)
+nope₁ (() · _)
+
+nope₂ : ∀ {A} → ¬ (∅ ⊢ ƛ "x" ⇒ ` "x" · ` "x" ⦂ A)
+nope₂ (⊢ƛ (⊢` ∋x · ⊢` ∋x′))  =  contradiction (∋-injective ∋x ∋x′)
+  where
+  contradiction : ∀ {A B} → ¬ (A ⇒ B ≡ A)
+  contradiction ()
