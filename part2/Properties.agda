@@ -154,3 +154,88 @@ value? ⊢M with progress ⊢M
 ... | done VM   = yes VM
 ... | step M—→M′ = no (—→¬V M—→M′)
 
+-- extending the map
+ext : ∀ {Γ Δ}
+  → (∀ {x A}     →         Γ ∋ x ⦂ A →         Δ ∋ x ⦂ A)
+    -----------------------------------------------------
+  → (∀ {x y A B} → Γ , y ⦂ B ∋ x ⦂ A → Δ , y ⦂ B ∋ x ⦂ A)
+ext ρ Z           =  Z
+ext ρ (S x≢y ∋x)  =  S x≢y (ρ ∋x)
+
+rename : ∀ {Γ Δ}
+  → (∀ {x A} → Γ ∋ x ⦂ A → Δ ∋ x ⦂ A)
+    ----------------------------------
+  → (∀ {M A} → Γ ⊢ M ⦂ A → Δ ⊢ M ⦂ A)
+rename ρ (⊢` ∋w)           =  ⊢` (ρ ∋w)
+-- use the previous lemma to extend the map ρ suitably and use induction to rename the body of the abstraction.
+rename ρ (⊢ƛ ⊢N)           =  ⊢ƛ (rename (ext ρ) ⊢N)
+rename ρ (⊢L · ⊢M)         =  (rename ρ ⊢L) · (rename ρ ⊢M)
+rename ρ ⊢zero             =  ⊢zero
+rename ρ (⊢suc ⊢M)         =  ⊢suc (rename ρ ⊢M)
+rename ρ (⊢case ⊢L ⊢M ⊢N)  = ⊢case (rename ρ ⊢L) (rename ρ ⊢M) (rename (ext ρ) ⊢N)
+rename ρ (⊢μ ⊢M)           =  ⊢μ (rename (ext ρ) ⊢M)
+
+weaken : ∀ {Γ M A}
+  → ∅ ⊢ M ⦂ A
+    ----------
+  → Γ ⊢ M ⦂ A
+weaken {Γ} ⊢M = rename ρ ⊢M
+  where
+  ρ : ∀ {z C}
+    → ∅ ∋ z ⦂ C
+      ---------
+    → Γ ∋ z ⦂ C
+  ρ ()
+
+drop : ∀ {Γ x M A B C}
+  → Γ , x ⦂ A , x ⦂ B ⊢ M ⦂ C
+    --------------------------
+  → Γ , x ⦂ B ⊢ M ⦂ C
+drop {Γ} {x} {M} {A} {B} {C} ⊢M = rename ρ ⊢M
+  where
+  ρ : ∀ {z C}
+    → Γ , x ⦂ A , x ⦂ B ∋ z ⦂ C
+      -------------------------
+    → Γ , x ⦂ B ∋ z ⦂ C
+  ρ Z                 =  Z
+  ρ (S x≢x Z) = ⊥-elim (x≢x refl)
+  ρ (S x≢z (S x₁≢z z)) = S x₁≢z z
+
+swap : ∀ {Γ x y M A B C}
+  → x ≢ y
+  → Γ , y ⦂ B , x ⦂ A ⊢ M ⦂ C
+    --------------------------
+  → Γ , x ⦂ A , y ⦂ B ⊢ M ⦂ C
+swap {Γ} {x} {y} {M} {A} {B} {C} x≢y ⊢M = rename ρ ⊢M
+  where
+  ρ : ∀ {z C}
+    → Γ , y ⦂ B , x ⦂ A ∋ z ⦂ C
+      --------------------------
+    → Γ , x ⦂ A , y ⦂ B ∋ z ⦂ C
+  ρ Z = S x≢y Z
+  ρ (S x≢y Z) = Z
+  ρ (S x≢z (S z≢y n)) = S z≢y (S x≢z n)
+
+subst : ∀ {Γ x N V A B}
+  → ∅ ⊢ V ⦂ A
+  → Γ , x ⦂ A ⊢ N ⦂ B
+    --------------------
+  → Γ ⊢ N [ x := V ] ⦂ B
+subst {x = y} ⊢V (⊢` {x = x} Z) with x ≟ y
+... | yes _           =  weaken ⊢V
+... | no  x≢y         =  ⊥-elim (x≢y refl)
+subst {x = y} ⊢V (⊢` {x = x} (S x≢y ∋x)) with x ≟ y
+... | yes refl        =  ⊥-elim (x≢y refl)
+... | no  _           =  ⊢` ∋x
+subst {x = y} ⊢V (⊢ƛ {x = x} ⊢N) with x ≟ y
+... | yes refl        =  ⊢ƛ (drop ⊢N)
+... | no  x≢y         =  ⊢ƛ (subst ⊢V (swap x≢y ⊢N))
+subst ⊢V (⊢L · ⊢M)    =  (subst ⊢V ⊢L) · (subst ⊢V ⊢M)
+subst ⊢V ⊢zero        =  ⊢zero
+subst ⊢V (⊢suc ⊢M)    =  ⊢suc (subst ⊢V ⊢M)
+subst {x = y} ⊢V (⊢case {x = x} ⊢L ⊢M ⊢N) with x ≟ y
+... | yes refl        =  ⊢case (subst ⊢V ⊢L) (subst ⊢V ⊢M) (drop ⊢N)
+... | no  x≢y         =  ⊢case (subst ⊢V ⊢L) (subst ⊢V ⊢M) (subst ⊢V (swap x≢y ⊢N))
+subst {x = y} ⊢V (⊢μ {x = x} ⊢M) with x ≟ y
+... | yes refl        =  ⊢μ (drop ⊢M)
+... | no  x≢y         =  ⊢μ (subst ⊢V (swap x≢y ⊢M))
