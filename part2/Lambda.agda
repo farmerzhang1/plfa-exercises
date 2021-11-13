@@ -106,6 +106,29 @@ _[_:=_] : Term → Id → Term → Term -- this is β-reduction
 ... | yes _          =  μ x ⇒ N
 ... | no  _          =  μ x ⇒ N [ y := V ]
 
+{-
+The definition of substitution above has three clauses ( ƛ , case , and μ ) that invoke a with
+clause to deal with bound variables. Rewrite the definition to factor the common part of these
+three clauses into a single function, defined by mutual recursion with substitution.
+-}
+-- seems like we don't normally use decidable in types(? just guessing), but use it in `with _ ≟ _`
+_[_:=_]′if_≢_ : Term → Id → Term → Id → Id → Term
+
+_[_:=_]′ : Term → Id → Term → Term
+(L · M) [ y := V ]′   =  L [ y := V ]′ · M [ y := V ]′
+(`zero) [ y := V ]′   =  `zero
+(`suc M) [ y := V ]′  =  `suc M [ y := V ]′
+(` x) [ y := V ]′ with x ≟ y
+... | yes _          =  V
+... | no  _          =  ` x
+(case L [zero⇒ M |suc x ⇒ N ]) [ y := V ]′ = case L [ y := V ]′ [zero⇒ M [ y := V ]′ |suc x ⇒ N [ y := V ]′if x ≢ y ]
+(μ x ⇒ N) [ y := V ]′ = μ x ⇒ N [ y := V ]′if x ≢ y
+(ƛ x ⇒ N) [ y := V ]′ = ƛ x ⇒ N [ y := V ]′if x ≢ y
+
+N [ x := V ]′if y ≢ z with y ≟ z
+... | yes _ = N
+... | no _ = N [ x := V ]′
+
 infix 4 _—→_
 
 data _—→_ : Term → Term → Set where
@@ -356,6 +379,9 @@ Ch A = (A ⇒ A) ⇒ A ⇒ A
 
 ⊢2+2 : ∅ ⊢ plus · two · two ⦂ `ℕ
 ⊢2+2 = ⊢plus · ⊢two · ⊢two
+
+⊢2-2 : ∅ ⊢ minus · two · two ⦂ `ℕ
+⊢2-2 = ⊢minus · ⊢two · ⊢two
 
 ⊢sucᶜ : ∅ ⊢ sucᶜ ⦂ `ℕ ⇒ `ℕ
 ⊢sucᶜ = ⊢ƛ (⊢suc (⊢` Z))
