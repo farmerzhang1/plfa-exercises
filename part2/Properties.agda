@@ -221,21 +221,473 @@ subst : ∀ {Γ x N V A B}
   → Γ , x ⦂ A ⊢ N ⦂ B
     --------------------
   → Γ ⊢ N [ x := V ] ⦂ B
-subst {x = y} ⊢V (⊢` {x = x} Z) with x ≟ y
-... | yes _           =  weaken ⊢V
-... | no  x≢y         =  ⊥-elim (x≢y refl)
+{- 这个是x := 的那个 -} {- 这个x是 x ⦂ 的那个 -} -- 可以{ x = y } 这样就可以省略不想要的implicit argument
+subst {x = y} ⊢V (⊢` {x = x}  Z) with x ≟ y
+... | yes _           = weaken ⊢V
+... | no  x≢y         = ⊥-elim (x≢y refl)
 subst {x = y} ⊢V (⊢` {x = x} (S x≢y ∋x)) with x ≟ y
-... | yes refl        =  ⊥-elim (x≢y refl)
-... | no  _           =  ⊢` ∋x
+... | yes refl        = ⊥-elim (x≢y refl)
+... | no  _           = ⊢` ∋x
+subst ⊢V (⊢L · ⊢M)    = (subst ⊢V ⊢L) · (subst ⊢V ⊢M)
+subst ⊢V ⊢zero        = ⊢zero
+subst ⊢V (⊢suc ⊢M)    = ⊢suc (subst ⊢V ⊢M)
 subst {x = y} ⊢V (⊢ƛ {x = x} ⊢N) with x ≟ y
-... | yes refl        =  ⊢ƛ (drop ⊢N)
-... | no  x≢y         =  ⊢ƛ (subst ⊢V (swap x≢y ⊢N))
-subst ⊢V (⊢L · ⊢M)    =  (subst ⊢V ⊢L) · (subst ⊢V ⊢M)
-subst ⊢V ⊢zero        =  ⊢zero
-subst ⊢V (⊢suc ⊢M)    =  ⊢suc (subst ⊢V ⊢M)
+... | yes refl        = ⊢ƛ (drop ⊢N)
+... | no  x≢y         = ⊢ƛ (subst ⊢V (swap x≢y ⊢N))
 subst {x = y} ⊢V (⊢case {x = x} ⊢L ⊢M ⊢N) with x ≟ y
-... | yes refl        =  ⊢case (subst ⊢V ⊢L) (subst ⊢V ⊢M) (drop ⊢N)
-... | no  x≢y         =  ⊢case (subst ⊢V ⊢L) (subst ⊢V ⊢M) (subst ⊢V (swap x≢y ⊢N))
+... | yes refl        = ⊢case (subst ⊢V ⊢L) (subst ⊢V ⊢M) (drop ⊢N)
+... | no  x≢y         = ⊢case (subst ⊢V ⊢L) (subst ⊢V ⊢M) (subst ⊢V (swap x≢y ⊢N))
 subst {x = y} ⊢V (⊢μ {x = x} ⊢M) with x ≟ y
-... | yes refl        =  ⊢μ (drop ⊢M)
-... | no  x≢y         =  ⊢μ (subst ⊢V (swap x≢y ⊢M))
+... | yes refl        = ⊢μ (drop ⊢M)
+... | no  x≢y         = ⊢μ (subst ⊢V (swap x≢y ⊢M))
+
+{-
+Rewrite subst to work with the modified definition _[_:=_]′
+from the exercise in the previous chapter.
+As before, this should factor dealing with
+bound variables into a single function,
+defined by mutual recursion
+with the proof that substitution preserves types.
+-}
+drop-or-swap : ∀ {V Γ N A B C}
+  → ∅ ⊢ V ⦂ A
+  → (x : Id) → (y : Id)
+  → Γ , y ⦂ A , x ⦂ C ⊢ N ⦂ B
+  → Γ , x ⦂ C ⊢ N [ y := V ]′if x ≢ y ⦂ B
+
+subst′ : ∀ {Γ x N V A B}
+  → ∅ ⊢ V ⦂ A
+  → Γ , x ⦂ A ⊢ N ⦂ B
+    --------------------
+  → Γ ⊢ N [ x := V ]′ ⦂ B
+subst′ {x = y} ⊢V (⊢` {x = x} Z) with x ≟ y
+... | yes _           = weaken ⊢V
+... | no  x≢y         = ⊥-elim (x≢y refl)
+subst′ {x = y} ⊢V (⊢` {x = x} (S x≢y Γ∋x)) with x ≟ y
+... | yes refl = ⊥-elim (x≢y refl)
+... | no _ = ⊢` Γ∋x
+subst′ {x = y} ⊢V (⊢ƛ {x = x} ⊢N) = ⊢ƛ (drop-or-swap ⊢V x y ⊢N)
+subst′ ⊢V (⊢L · ⊢M) = (subst′ ⊢V ⊢L) · (subst′ ⊢V ⊢M)
+subst′ ⊢V ⊢zero = ⊢zero
+subst′ ⊢V (⊢suc ⊢N) = ⊢suc (subst′ ⊢V ⊢N)
+subst′ {x = y} ⊢V (⊢case {x = x} ⊢L ⊢M ⊢N) = ⊢case (subst′ ⊢V ⊢L) (subst′ ⊢V ⊢M) (drop-or-swap ⊢V x y ⊢N)
+subst′ {x = y} ⊢V (⊢μ {x = x} ⊢N) = ⊢μ (drop-or-swap ⊢V x y ⊢N)
+
+drop-or-swap ⊢V x y ⊢N with x ≟ y
+... | yes refl = drop ⊢N
+... | no  x≢y = subst′ ⊢V (swap x≢y ⊢N)
+
+preserve : ∀ {M N A}
+  → ∅ ⊢ M ⦂ A
+  → M —→ N
+    ----------
+  → ∅ ⊢ N ⦂ A
+preserve (⊢` ())
+preserve (⊢ƛ ⊢N)                 ()
+preserve (⊢L · ⊢M)               (ξ-·₁ L—→L′)     =  (preserve ⊢L L—→L′) · ⊢M
+preserve (⊢L · ⊢M)               (ξ-·₂ VL M—→M′)  =  ⊢L · (preserve ⊢M M—→M′)
+preserve ((⊢ƛ ⊢N) · ⊢V)          (β-ƛ VV)         =  subst ⊢V ⊢N
+preserve ⊢zero                   ()
+preserve (⊢suc ⊢M)               (ξ-suc M—→M′)    =  ⊢suc (preserve ⊢M M—→M′)
+preserve (⊢case ⊢L ⊢M ⊢N)        (ξ-case L—→L′)   =  ⊢case (preserve ⊢L L—→L′) ⊢M ⊢N
+preserve (⊢case ⊢zero ⊢M ⊢N)     (β-zero)         =  ⊢M
+preserve (⊢case (⊢suc ⊢V) ⊢M ⊢N) (β-suc VV)       =  subst ⊢V ⊢N
+preserve (⊢μ ⊢M)                 (β-μ)            =  subst (⊢μ ⊢M) ⊢M
+
+record Gas : Set where
+  constructor gas
+  field
+    amount : ℕ
+
+data Finished (N : Term) : Set where
+
+  done :
+      Value N
+      ----------
+    → Finished N
+
+  out-of-gas :
+      ----------
+      Finished N
+
+data Steps (L : Term) : Set where
+
+  steps : ∀ {N}
+    → L —↠ N
+    → Finished N
+      ----------
+    → Steps L
+
+eval : ∀ {L A}
+  → Gas
+  → ∅ ⊢ L ⦂ A
+    ---------
+  → Steps L
+eval {L} (gas zero)    ⊢L                                =  steps (L ∎) out-of-gas
+eval {L} (gas (suc m)) ⊢L with progress ⊢L
+... | done VL                                            =  steps (L ∎) (done VL)
+... | step {M} L—→M with eval (gas m) (preserve ⊢L L—→M)
+...    | steps M—↠N fin                                  =  steps (L —→⟨ L—→M ⟩ M—↠N) fin
+
+_ : eval (gas 100) (⊢twoᶜ · ⊢sucᶜ · ⊢zero) ≡
+  steps
+   ((ƛ "s" ⇒ (ƛ "z" ⇒ ` "s" · (` "s" · ` "z"))) · (ƛ "n" ⇒ `suc ` "n")
+   · `zero
+   —→⟨ ξ-·₁ (β-ƛ V-ƛ) ⟩
+    (ƛ "z" ⇒ (ƛ "n" ⇒ `suc ` "n") · ((ƛ "n" ⇒ `suc ` "n") · ` "z")) ·
+     `zero
+   —→⟨ β-ƛ V-zero ⟩
+    (ƛ "n" ⇒ `suc ` "n") · ((ƛ "n" ⇒ `suc ` "n") · `zero)
+   —→⟨ ξ-·₂ V-ƛ (β-ƛ V-zero) ⟩
+    (ƛ "n" ⇒ `suc ` "n") · `suc `zero
+   —→⟨ β-ƛ (V-suc V-zero) ⟩
+    `suc (`suc `zero)
+   ∎)
+   (done (V-suc (V-suc V-zero)))
+_ = refl
+
+_ : eval (gas 100) ⊢2+2 ≡
+  steps
+  ((μ "+" ⇒
+    (ƛ "m" ⇒
+    (ƛ "n" ⇒
+      case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n")
+      ])))
+  · `suc (`suc `zero)
+  · `suc (`suc `zero)
+  —→⟨ ξ-·₁ (ξ-·₁ β-μ) ⟩
+  (ƛ "m" ⇒
+    (ƛ "n" ⇒
+    case ` "m" [zero⇒ ` "n" |suc "m" ⇒
+    `suc
+    ((μ "+" ⇒
+      (ƛ "m" ⇒
+        (ƛ "n" ⇒
+        case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n")
+        ])))
+      · ` "m"
+      · ` "n")
+    ]))
+  · `suc (`suc `zero)
+  · `suc (`suc `zero)
+  —→⟨ ξ-·₁ (β-ƛ (V-suc (V-suc V-zero))) ⟩
+  (ƛ "n" ⇒
+    case `suc (`suc `zero) [zero⇒ ` "n" |suc "m" ⇒
+    `suc
+    ((μ "+" ⇒
+      (ƛ "m" ⇒
+      (ƛ "n" ⇒
+        case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n")
+        ])))
+    · ` "m"
+    · ` "n")
+    ])
+  · `suc (`suc `zero)
+  —→⟨ β-ƛ (V-suc (V-suc V-zero)) ⟩
+  case `suc (`suc `zero) [zero⇒ `suc (`suc `zero) |suc "m" ⇒
+  `suc
+  ((μ "+" ⇒
+    (ƛ "m" ⇒
+      (ƛ "n" ⇒
+      case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n")
+      ])))
+    · ` "m"
+    · `suc (`suc `zero))
+  ]
+  —→⟨ β-suc (V-suc V-zero) ⟩
+  `suc
+  ((μ "+" ⇒
+    (ƛ "m" ⇒
+      (ƛ "n" ⇒
+      case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n")
+      ])))
+    · `suc `zero
+    · `suc (`suc `zero))
+  —→⟨ ξ-suc (ξ-·₁ (ξ-·₁ β-μ)) ⟩
+  `suc
+  ((ƛ "m" ⇒
+    (ƛ "n" ⇒
+      case ` "m" [zero⇒ ` "n" |suc "m" ⇒
+      `suc
+      ((μ "+" ⇒
+        (ƛ "m" ⇒
+        (ƛ "n" ⇒
+          case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n")
+          ])))
+      · ` "m"
+      · ` "n")
+      ]))
+    · `suc `zero
+    · `suc (`suc `zero))
+  —→⟨ ξ-suc (ξ-·₁ (β-ƛ (V-suc V-zero))) ⟩
+  `suc
+  ((ƛ "n" ⇒
+    case `suc `zero [zero⇒ ` "n" |suc "m" ⇒
+    `suc
+    ((μ "+" ⇒
+      (ƛ "m" ⇒
+        (ƛ "n" ⇒
+        case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n")
+        ])))
+      · ` "m"
+      · ` "n")
+    ])
+    · `suc (`suc `zero))
+  —→⟨ ξ-suc (β-ƛ (V-suc (V-suc V-zero))) ⟩
+  `suc
+  case `suc `zero [zero⇒ `suc (`suc `zero) |suc "m" ⇒
+  `suc
+  ((μ "+" ⇒
+    (ƛ "m" ⇒
+      (ƛ "n" ⇒
+      case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n")
+      ])))
+    · ` "m"
+    · `suc (`suc `zero))
+  ]
+  —→⟨ ξ-suc (β-suc V-zero) ⟩
+  `suc
+  (`suc
+    ((μ "+" ⇒
+      (ƛ "m" ⇒
+      (ƛ "n" ⇒
+        case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n")
+        ])))
+    · `zero
+    · `suc (`suc `zero)))
+  —→⟨ ξ-suc (ξ-suc (ξ-·₁ (ξ-·₁ β-μ))) ⟩
+  `suc
+  (`suc
+    ((ƛ "m" ⇒
+      (ƛ "n" ⇒
+      case ` "m" [zero⇒ ` "n" |suc "m" ⇒
+      `suc
+      ((μ "+" ⇒
+        (ƛ "m" ⇒
+          (ƛ "n" ⇒
+          case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n")
+          ])))
+        · ` "m"
+        · ` "n")
+      ]))
+    · `zero
+    · `suc (`suc `zero)))
+  —→⟨ ξ-suc (ξ-suc (ξ-·₁ (β-ƛ V-zero))) ⟩
+  `suc
+  (`suc
+    ((ƛ "n" ⇒
+      case `zero [zero⇒ ` "n" |suc "m" ⇒
+      `suc
+      ((μ "+" ⇒
+        (ƛ "m" ⇒
+        (ƛ "n" ⇒
+          case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n")
+          ])))
+      · ` "m"
+      · ` "n")
+      ])
+    · `suc (`suc `zero)))
+  —→⟨ ξ-suc (ξ-suc (β-ƛ (V-suc (V-suc V-zero)))) ⟩
+  `suc
+  (`suc
+    case `zero [zero⇒ `suc (`suc `zero) |suc "m" ⇒
+    `suc
+    ((μ "+" ⇒
+      (ƛ "m" ⇒
+      (ƛ "n" ⇒
+        case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (` "+" · ` "m" · ` "n")
+        ])))
+    · ` "m"
+    · `suc (`suc `zero))
+    ])
+  —→⟨ ξ-suc (ξ-suc β-zero) ⟩ `suc (`suc (`suc (`suc `zero))) ∎)
+  (done (V-suc (V-suc (V-suc (V-suc V-zero)))))
+_ = refl
+aa : eval (gas 100) ⊢2-2 ≡
+  steps
+  ((μ "-" ⇒
+    (ƛ "m" ⇒
+    (ƛ "n" ⇒
+      case ` "m" [zero⇒ `zero |suc "m" ⇒
+      case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+      ])))
+  · `suc (`suc `zero)
+  · `suc (`suc `zero)
+  —→⟨ ξ-·₁ (ξ-·₁ β-μ) ⟩
+  (ƛ "m" ⇒
+    (ƛ "n" ⇒
+    case ` "m" [zero⇒ `zero |suc "m" ⇒
+    case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒
+    (μ "-" ⇒
+      (ƛ "m" ⇒
+      (ƛ "n" ⇒
+        case ` "m" [zero⇒ `zero |suc "m" ⇒
+        case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+        ])))
+    · ` "m"
+    · ` "n"
+    ]
+    ]))
+  · `suc (`suc `zero)
+  · `suc (`suc `zero)
+  —→⟨ ξ-·₁ (β-ƛ (V-suc (V-suc V-zero))) ⟩
+  (ƛ "n" ⇒
+    case `suc (`suc `zero) [zero⇒ `zero |suc "m" ⇒
+    case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒
+    (μ "-" ⇒
+    (ƛ "m" ⇒
+      (ƛ "n" ⇒
+      case ` "m" [zero⇒ `zero |suc "m" ⇒
+      case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+      ])))
+    · ` "m"
+    · ` "n"
+    ]
+    ])
+  · `suc (`suc `zero)
+  —→⟨ β-ƛ (V-suc (V-suc V-zero)) ⟩
+  case `suc (`suc `zero) [zero⇒ `zero |suc "m" ⇒
+  case `suc (`suc `zero) [zero⇒ `suc ` "m" |suc "n" ⇒
+  (μ "-" ⇒
+    (ƛ "m" ⇒
+    (ƛ "n" ⇒
+      case ` "m" [zero⇒ `zero |suc "m" ⇒
+      case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+      ])))
+  · ` "m"
+  · ` "n"
+  ]
+  ]
+  —→⟨ β-suc (V-suc V-zero) ⟩
+  case `suc (`suc `zero) [zero⇒ `suc (`suc `zero) |suc "n" ⇒
+  (μ "-" ⇒
+    (ƛ "m" ⇒
+    (ƛ "n" ⇒
+      case ` "m" [zero⇒ `zero |suc "m" ⇒
+      case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+      ])))
+  · `suc `zero
+  · ` "n"
+  ]
+  —→⟨ β-suc (V-suc V-zero) ⟩
+  (μ "-" ⇒
+    (ƛ "m" ⇒
+    (ƛ "n" ⇒
+      case ` "m" [zero⇒ `zero |suc "m" ⇒
+      case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+      ])))
+  · `suc `zero
+  · `suc `zero
+  —→⟨ ξ-·₁ (ξ-·₁ β-μ) ⟩
+  (ƛ "m" ⇒
+    (ƛ "n" ⇒
+    case ` "m" [zero⇒ `zero |suc "m" ⇒
+    case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒
+    (μ "-" ⇒
+      (ƛ "m" ⇒
+      (ƛ "n" ⇒
+        case ` "m" [zero⇒ `zero |suc "m" ⇒
+        case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+        ])))
+    · ` "m"
+    · ` "n"
+    ]
+    ]))
+  · `suc `zero
+  · `suc `zero
+  —→⟨ ξ-·₁ (β-ƛ (V-suc V-zero)) ⟩
+  (ƛ "n" ⇒
+    case `suc `zero [zero⇒ `zero |suc "m" ⇒
+    case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒
+    (μ "-" ⇒
+    (ƛ "m" ⇒
+      (ƛ "n" ⇒
+      case ` "m" [zero⇒ `zero |suc "m" ⇒
+      case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+      ])))
+    · ` "m"
+    · ` "n"
+    ]
+    ])
+  · `suc `zero
+  —→⟨ β-ƛ (V-suc V-zero) ⟩
+  case `suc `zero [zero⇒ `zero |suc "m" ⇒
+  case `suc `zero [zero⇒ `suc ` "m" |suc "n" ⇒
+  (μ "-" ⇒
+    (ƛ "m" ⇒
+    (ƛ "n" ⇒
+      case ` "m" [zero⇒ `zero |suc "m" ⇒
+      case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+      ])))
+  · ` "m"
+  · ` "n"
+  ]
+  ]
+  —→⟨ β-suc V-zero ⟩
+  case `suc `zero [zero⇒ `suc `zero |suc "n" ⇒
+  (μ "-" ⇒
+    (ƛ "m" ⇒
+    (ƛ "n" ⇒
+      case ` "m" [zero⇒ `zero |suc "m" ⇒
+      case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+      ])))
+  · `zero
+  · ` "n"
+  ]
+  —→⟨ β-suc V-zero ⟩
+  (μ "-" ⇒
+    (ƛ "m" ⇒
+    (ƛ "n" ⇒
+      case ` "m" [zero⇒ `zero |suc "m" ⇒
+      case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+      ])))
+  · `zero
+  · `zero
+  —→⟨ ξ-·₁ (ξ-·₁ β-μ) ⟩
+  (ƛ "m" ⇒
+    (ƛ "n" ⇒
+    case ` "m" [zero⇒ `zero |suc "m" ⇒
+    case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒
+    (μ "-" ⇒
+      (ƛ "m" ⇒
+      (ƛ "n" ⇒
+        case ` "m" [zero⇒ `zero |suc "m" ⇒
+        case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+        ])))
+    · ` "m"
+    · ` "n"
+    ]
+    ]))
+  · `zero
+  · `zero
+  —→⟨ ξ-·₁ (β-ƛ V-zero) ⟩
+  (ƛ "n" ⇒
+    case `zero [zero⇒ `zero |suc "m" ⇒
+    case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒
+    (μ "-" ⇒
+    (ƛ "m" ⇒
+      (ƛ "n" ⇒
+      case ` "m" [zero⇒ `zero |suc "m" ⇒
+      case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+      ])))
+    · ` "m"
+    · ` "n"
+    ]
+    ])
+  · `zero
+  —→⟨ β-ƛ V-zero ⟩
+  case `zero [zero⇒ `zero |suc "m" ⇒
+  case `zero [zero⇒ `suc ` "m" |suc "n" ⇒
+  (μ "-" ⇒
+    (ƛ "m" ⇒
+    (ƛ "n" ⇒
+      case ` "m" [zero⇒ `zero |suc "m" ⇒
+      case ` "n" [zero⇒ `suc ` "m" |suc "n" ⇒ ` "-" · ` "m" · ` "n" ]
+      ])))
+  · ` "m"
+  · ` "n"
+  ]
+  ]
+  —→⟨ β-zero ⟩ `zero ∎)
+  (done V-zero)
+aa = refl
