@@ -691,3 +691,74 @@ aa : eval (gas 100) ⊢2-2 ≡
   —→⟨ β-zero ⟩ `zero ∎)
   (done V-zero)
 aa = refl
+
+Normal : Term → Set
+Normal M  =  ∀ {N} → ¬ (M —→ N)
+
+Stuck : Term → Set
+Stuck M  =  Normal M × ¬ Value M
+
+unstuck : ∀ {M A}
+  → ∅ ⊢ M ⦂ A
+    -----------
+  → ¬ (Stuck M)
+unstuck {M} {A} ⊢M ⟨ fst , snd ⟩ with progress ⊢M
+... | step x = fst x
+... | done x = snd x
+
+preserves : ∀ {M N A}
+  → ∅ ⊢ M ⦂ A
+  → M —↠ N -- many steps of reductions
+    ---------
+  → ∅ ⊢ N ⦂ A
+preserves {M} {N} {A} ⊢M M—↠N with M—↠N
+... | M ∎ = ⊢M
+... | M —→⟨ x₁ ⟩ y with progress ⊢M
+... | step _ = preserves (preserve ⊢M x₁) y -- one step of reduction
+... | done x = ⊥-elim (V¬—→ x x₁)
+
+wttdgs : ∀ {M N A}
+  → ∅ ⊢ M ⦂ A
+  → M —↠ N
+    -----------
+  → ¬ (Stuck N)
+wttdgs ⊢M m2n = unstuck (preserves ⊢M m2n)
+
+-- i get stuck ()
+stuck : ∀ {A} → ¬ (∅ ⊢ ` "x" ⦂ A) → Stuck (` "x")
+stuck {A} ¬M = ⟨ normalx , ¬valuex ⟩ where
+  normalx : Normal (` "x")
+  normalx ()
+  ¬valuex : ¬ Value (` "x")
+  ¬valuex ()
+-- i get unstuck!
+
+cong₄ : ∀ {A B C D E : Set} (f : A → B → C → D → E)
+  {s w : A} {t x : B} {u y : C} {v z : D}
+  → s ≡ w → t ≡ x → u ≡ y → v ≡ z → f s t u v ≡ f w x y z
+cong₄ f refl refl refl refl = refl
+
+det : ∀ {M M′ M″}
+  → (M —→ M′)
+  → (M —→ M″)
+    --------
+  → M′ ≡ M″
+det (ξ-·₁ L—→L′)   (ξ-·₁ L—→L″)     =  cong₂ _·_ (det L—→L′ L—→L″) refl
+det (ξ-·₁ L—→L′)   (ξ-·₂ VL M—→M″)  =  ⊥-elim (V¬—→ VL L—→L′)
+det (ξ-·₁ L—→L′)   (β-ƛ _)          =  ⊥-elim (V¬—→ V-ƛ L—→L′)
+det (ξ-·₂ VL _)    (ξ-·₁ L—→L″)     =  ⊥-elim (V¬—→ VL L—→L″)
+det (ξ-·₂ _ M—→M′) (ξ-·₂ _ M—→M″)   =  cong₂ _·_ refl (det M—→M′ M—→M″)
+det (ξ-·₂ _ M—→M′) (β-ƛ VM)         =  ⊥-elim (V¬—→ VM M—→M′)
+det (β-ƛ _)        (ξ-·₁ L—→L″)     =  ⊥-elim (V¬—→ V-ƛ L—→L″)
+det (β-ƛ VM)       (ξ-·₂ _ M—→M″)   =  ⊥-elim (V¬—→ VM M—→M″)
+det (β-ƛ _)        (β-ƛ _)          =  refl
+det (ξ-suc M—→M′)  (ξ-suc M—→M″)    =  cong `suc_ (det M—→M′ M—→M″)
+det (ξ-case L—→L′) (ξ-case L—→L″)   =  cong₄ case_[zero⇒_|suc_⇒_]
+                                         (det L—→L′ L—→L″) refl refl refl
+det (ξ-case L—→L′) β-zero           =  ⊥-elim (V¬—→ V-zero L—→L′)
+det (ξ-case L—→L′) (β-suc VL)       =  ⊥-elim (V¬—→ (V-suc VL) L—→L′)
+det β-zero         (ξ-case M—→M″)   =  ⊥-elim (V¬—→ V-zero M—→M″)
+det β-zero         β-zero           =  refl
+det (β-suc VL)     (ξ-case L—→L″)   =  ⊥-elim (V¬—→ (V-suc VL) L—→L″)
+det (β-suc _)      (β-suc _)        =  refl
+det β-μ            β-μ              =  refl
