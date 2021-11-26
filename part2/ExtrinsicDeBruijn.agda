@@ -3,9 +3,9 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl)
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Nat using (ℕ; zero; suc; _<_; _≤?_; z≤n; s≤s)
-open import Relation.Nullary using (¬_)
+open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Relation.Nullary.Decidable using (True; toWitness)
-open import plfa.part2.DeBruijn hiding (plus; count; #_; _∋_; Z; S_)
+open import plfa.part2.DeBruijn using (Context; ∅; _,_; Type; `ℕ; _⇒_; length; lookup) -- hiding (plus; count; #_; _∋_; Z; S_)
 -- let's do some exercise!
 
 {-
@@ -49,10 +49,10 @@ _ : Type
 _ = `ℕ ⇒ `ℕ
 
 data _∋_⦂_ : Context → Var → Type → Set where
-  Z : ∀ {Γ A} {x : ℕ}
-    → {x∈Γ : True (suc x ≤? length Γ)}
+  Z : ∀ {Γ A}
+    -- → {x∈Γ : True (suc x ≤? length Γ)}
       ------------------
-    → Γ ∋ x ⦂ A
+    → Γ , A ∋ zero ⦂ A
 
   S_ : ∀ {Γ A B} {x : ℕ}
     -- → {x∈Γ : True (suc x ≤? length Γ)}
@@ -103,3 +103,64 @@ count {Γ , _} {(suc n)} (s≤s p)    =  S (count p)
 
 ⊢plus : ∀ {Γ} → Γ ⊢ plus ⦂ `ℕ ⇒ `ℕ ⇒ `ℕ
 ⊢plus = ⊢μ (⊢ƛ (⊢ƛ (⊢case (# 1) (# 0) (⊢suc (((# 3) · (# 0)) · (# 1))))))
+
+free : Term
+free = `suc (` 0)
+
+⊢free : ∀ {Γ} → Γ ⊢ free ⦂ `ℕ
+⊢free = ⊢suc (⊢` {!   !})
+
+ext : ∀ {Γ Δ}
+  → (∀ {A n} →       Γ ∋ n ⦂ A →     Δ ∋ n ⦂ A)
+    ---------------------------------
+  → (∀ {A B n} → Γ , B ∋  n ⦂ A → Δ , B ∋  n ⦂ A)
+ext ρ Z = Z
+ext ρ (S `n) = S (ρ `n)
+
+ext′ : (Var → Var) → Var → Var
+ext′ ρ zero = zero
+ext′ ρ (suc n) = suc (ρ n)
+
+rename : ∀ {Γ Δ}
+  → (∀ {x A} → Γ ∋ x ⦂ A → Δ ∋ x ⦂ A)
+    ----------------------------------
+  → (∀ {M A} → Γ ⊢ M ⦂ A → Δ ⊢ M ⦂ A) -- ? 这个 rename 不太对吧 （）
+rename ρ (⊢` x) = ⊢` (ρ x)
+rename ρ (⊢ƛ ⊢N)           =  ⊢ƛ (rename (ext ρ) ⊢N)
+rename ρ (⊢L · ⊢M)         =  (rename ρ ⊢L) · (rename ρ ⊢M)
+rename ρ ⊢zero             =  ⊢zero
+rename ρ (⊢suc ⊢M)         =  ⊢suc (rename ρ ⊢M)
+rename ρ (⊢case ⊢L ⊢M ⊢N)  = ⊢case (rename ρ ⊢L) (rename ρ ⊢M) (rename (ext ρ) ⊢N)
+rename ρ (⊢μ ⊢M)           =  ⊢μ (rename (ext ρ) ⊢M)
+
+rename′ : (Var → Var) → ℕ → Term → Term -- renaming the free variables
+rename′ ρ depth (` x) with x ≤? depth -- if something goes wrong, change to < instead of <=
+... | yes _ = ` x
+... | no  _ = ` (ρ x)
+rename′ ρ depth (ƛ term) = ƛ (rename′ ρ (suc depth) term)
+rename′ ρ depth (term · term₁) = (rename′ ρ depth term) · (rename′ ρ depth term₁)
+rename′ ρ depth `zero = `zero
+rename′ ρ depth (`suc term) = `suc (rename′ ρ depth term)
+rename′ ρ depth case term [zero⇒ term₁ |suc⇒ term₂ ] = case (rename′ ρ depth term) [zero⇒ (rename′ ρ depth term₁) |suc⇒ (rename′ ρ (suc depth) term₂) ]
+rename′ ρ depth (μ term) = μ (rename′ ρ depth term)
+
+exts′ : ∀ {Γ Δ}
+  → (∀ {A x} →       Γ ∋ x ⦂ A →     Δ ⊢ ` x ⦂ A)
+    ---------------------------------
+  → (∀ {A B x} → Γ , B ∋ x ⦂ A → Δ , B ⊢ ` x ⦂ A)
+exts′ σ Z = ⊢` Z
+exts′ σ (S ∋x) = {!   !} where
+  aaa = σ ∋x -- `x : A
+
+exts : (Var → Term) → Var → Term
+exts σ zero = ` zero
+exts σ (suc n) = rename′ suc zero (σ n)
+
+
+exts-pres : ∀ {Γ Δ σ}
+  → (∀ {A x}  →      Γ ∋ x ⦂ A →            Δ ⊢ σ x ⦂ A)
+    ----------------------------------------------------
+  → (∀ {A B x} → Γ , B ∋ x ⦂ A → Δ , B ⊢ (exts σ) x ⦂ A)
+exts-pres ρ Z = ⊢` Z
+exts-pres ρ (S ∋x) = {!  !} where
+  aab = ρ ∋x
